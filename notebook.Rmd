@@ -1,0 +1,295 @@
+---
+title: "Laboratorio 2 - Alan Hurtarte"
+output:
+  html_document:
+    df_print: paged
+---
+## 19000590
+```{r include=FALSE}
+#install.packages('dplyr')
+#install.packages("ggplot2")
+library(dplyr)
+library(ggplot2)
+```
+## Variables
+* **datetime** - hourly date + timestamp
+* **season** - 1 = spring, 2 = summer, 3 = fall, 4 = winter
+* **holiday** - whether the day is considered a holiday
+* **workingday** - whether the day is neither a weekend nor holiday
+* **weather** - 
+  * 1: Clear, Few clouds, Partly cloudy, Partly cloudy 
+  * 2: Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist 
+  * 3: Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds 
+  * 4: Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog
+* **temp** - temperature in Celsius
+* **atemp** - “feels like” temperature in Celsius
+* **humidity** - relative humidity
+* **windspeed** - wind speed
+* **casual** - number of non-registered user rentals initiated
+* **registered** - number of registered user rentals initiated
+* **count** - number of total rentals
+
+---
+
+```{r echo=TRUE}
+dataset<-read.csv('demandaBicis.csv', encoding = 'UTF-8')
+dataset
+```
+---
+
+## 1.-  ¿Que mes es el que tiene la mayor demanda?
+
+```{r echo = TRUE}
+Sub1.dataset <- dataset %>%
+  select(dteday, casual, registered, cnt) %>%
+  mutate(Date = format(as.Date(dteday), "%m-%Y")) %>%
+    group_by(Date) %>%
+      summarise(Casual = sum(casual), Registered = sum(registered), Total = sum(cnt)) %>%
+        arrange(-Total)
+
+Sub1.dataset
+```
+### Respuesta
+ `El mes con mayor es demanda es septiembre del 2012 (9/2012)`
+ 
+---
+
+## 2.- ¿Que rango de hora es la de mayor demanda?
+
+```{r echo=TRUE}
+Sub2.dataset <- dataset %>%
+  select(dteday ,hr, casual, registered, cnt) %>%
+    group_by(hr) %>%
+      summarise(Casual = sum(casual), Registered = sum(registered), Total = sum(cnt)) %>%
+        arrange(-Total)
+Sub2.dataset
+```
+
+### Respuesta
+ `Como se puede observar en la tabla superior el rango con mayor demandas es de 17 a 18 horas, con un rango de demanda (309772, 336860)`
+
+---
+
+## 3.- ¿Que temporada es la mas alta?
+
+```{r echo=TRUE}
+Sub3.dataset <- dataset %>%
+  select(season, casual, registered, cnt) %>%
+    mutate(Season = case_when(season == 1 ~ 'Spring',
+        season == 2 ~ 'Summer',
+        season == 3 ~ 'Fall',
+        season == 4 ~ 'Winter')) %>%
+      group_by(Season) %>%
+        summarise(Casual = sum(casual), Registered = sum(registered), Total = sum(cnt)) %>%
+          arrange(-Total)
+Sub3.dataset
+```
+
+### Respuesta
+ `La temporada con mas demanda es Fall con 1061129. Se puede apreciar mejor con la grafica del inciso 8`
+
+---
+
+## 4.- ¿A que temperatura baja la demanda?
+
+```{r echo=TRUE}
+Sub4.dataset <- dataset %>%
+  select(temp, atemp, casual, registered, cnt) %>%
+    mutate(Temp = ((temp + atemp) / 2)*100 ) %>%
+      group_by(Temp) %>%
+        summarise(Casual = sum(casual), Registered = sum(registered), Total = sum(cnt)) %>%
+          arrange(Total)
+Sub4.dataset
+```
+
+### Respuesta
+`Si se toma el supuesto que una demanda baja sea menor a 100. La demanda es significativamente baja cuando hay mucho calor o mucho frio, por ejemplo debajo de 20ª o arriba de 40ª`
+
+---
+
+## 5.- ¿A que humedad baja la demanda?
+
+```{r echo=TRUE}
+Sub5.dataset <- dataset %>%
+  select(hum, casual, registered, cnt) %>%
+    group_by(hum) %>%
+      summarise(Casual = sum(casual), Registered = sum(registered), Total = sum(cnt)) %>%
+        arrange(Total)
+Sub5.dataset
+```
+
+### Respuesta
+`Si se toma el supuesto que una demanda baja sea menor a 100. Con la humedad abajo de 0.1 baja significativamente a 100 la demanda`
+
+---
+
+## 6.- ¿Que condiciones serian ideales para nuestra demanda?
+
+```{r echo=TRUE}
+getmode <- function(v) {
+ uniqv <- unique(v)
+ uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+Sub6.dataset.al <- dataset %>%
+  select(season, temp, hr, weekday, cnt,weathersit) %>%
+    filter(cnt > 700)
+Sub6.dataset.al
+
+
+Sub6.dataset.workingday <- dataset %>%
+  select(workingday, cnt) %>%
+  filter(cnt > 700 & workingday == 1)
+nrow(Sub6.dataset.workingday)
+
+Sub6.dataset.noworkingday <- dataset %>%
+  select(workingday, cnt) %>%
+  filter(cnt > 700 & workingday == 0)
+nrow(Sub6.dataset.noworkingday)
+
+Sub6.dataset.holiday <- dataset %>%
+  select(holiday, cnt) %>%
+  filter(cnt > 700 & holiday == 1)
+nrow(Sub6.dataset.holiday)
+
+Sub6.dataset.noholiday <- dataset %>%
+  select(holiday, cnt) %>%
+  filter(cnt > 700 & holiday == 0)
+nrow(Sub6.dataset.noholiday)
+
+Sub6.dataset.mode.weekday <- dataset %>%
+  select(weekday, cnt) %>%
+  filter(cnt > 700) %>%
+  select(weekday) %>%
+    mutate(Moda = getmode(weekday))
+Sub6.dataset.mode.weekday
+
+Sub6.dataset.mode.hr <- dataset %>%
+  select(hr, cnt) %>%
+  filter(cnt > 700) %>%
+  select(hr) %>%
+    mutate(Moda = getmode(hr))
+Sub6.dataset.mode.hr
+
+
+Sub6.dataset.mode.weathersit <- dataset %>%
+  select(weathersit, cnt) %>%
+  filter(cnt > 700) %>%
+  select(weathersit) %>%
+    mutate(Moda = getmode(weathersit))
+Sub6.dataset.mode.weathersit
+
+```
+
+### Repuestas
+`Tomando un punto con mas de 700 de demanda como buena demanda.`
+
+  * Debe ser un dia laboral
+    * 32 resultados en dia no laboral
+    * 288 resultados en dia laboral
+  * Debe ser dia no holiday
+    * 1 resultado en holiday
+    * 319 resultados en no holiday
+  * La moda del dia de la semana es 4, el cual es jueves
+  * La moda de la hora es 17
+  * La moda de la situación del clima es 1 (Clear, Few clouds, Partly cloudy, Partly cloudy)
+ 
+ ---
+ 
+## 7.- Realice una gráfica de la densidad de temperatura.
+
+```{r echo=TRUE}
+Sub7.dataset.all <- dataset %>%
+  select(temp, atemp) %>%
+    arrange(temp)
+Sub7.dataset.all
+
+Sub7.density<- density(Sub7.dataset.all$temp)
+Sub7.density
+plot(Sub7.density, main="Densidad de Temperatura", col = 'red')
+```
+ 
+---
+
+## 8.- Con una gráfica explique en que temporada hubieron mas rentas de bicicletas.
+ 
+```{r echo=TRUE}
+Sub8.dataset <- dataset %>%
+  select(season, casual, registered, cnt) %>%
+    mutate(Season = case_when(season == 1 ~ 'Spring',
+        season == 2 ~ 'Summer',
+        season == 3 ~ 'Fall',
+        season == 4 ~ 'Winter')) %>%
+      group_by(Season) %>%
+        summarise(Casual = sum(casual), Registered = sum(registered), Total = sum(cnt) / 1000) %>%
+          arrange(-Total)
+Sub8.dataset
+
+barplot(Sub8.dataset$Total,
+        main="Demanda por season",
+        xlab="Temporada",
+        ylab="Demanda (k)",
+        col= heat.colors(nrow(Sub8.dataset)),
+        names.arg = Sub8.dataset$Season)
+``` 
+ 
+---
+
+## 9.- Con una gráfica, que temperatura en que temporada producen una mayor renta de bicicleteas (Hint: heatmap).
+ 
+```{r echo=TRUE}
+
+Sub9.dataset <- dataset %>%
+  select(temp, atemp, cnt, season) %>%
+    mutate(Temp = round(((temp + atemp) / 2)*100) ) %>%
+      mutate(Season = case_when(season == 1 ~ 'Spring',
+            season == 2 ~ 'Summer',
+            season == 3 ~ 'Fall',
+            season == 4 ~ 'Winter')) %>%
+        select(Temp, Season, Total = cnt) %>%
+          arrange(Temp)
+Sub9.dataset
+
+ggplot(Sub9.dataset, aes(x = Season, y = Temp, fill = Total)) + geom_tile() + scale_fill_gradientn(colours = cm.colors(7))
+
+```
+
+---
+
+## 10.- Muestre una gráfica de barras de día de la semana por bicicletas rentas, pero muestre en la misma barra cuantas rentas fueron por usuarios casuales y cuentas por usuarios registrados.
+
+```{r echo=TRUE}
+Sub10.dataset <- dataset %>%
+  select(dteday, casual, registered, cnt) %>%
+    mutate(Date = weekdays(as.Date(dteday))) %>%
+      select(Date, casual, registered, cnt) %>%
+        group_by(Date) %>%
+          summarise(Casual = sum (casual), Registered = sum(registered), Total = sum(cnt))
+
+Sub10.dataset
+
+data <- rbind(Sub10.dataset$Casual,Sub10.dataset$Registered)
+
+barplot(data / 1000,
+        main="Demanda por dia",
+        xlab="Dia",
+        ylab="Demanda (k)",
+        col= cm.colors(nrow(Sub8.dataset)),
+        names.arg = Sub10.dataset$Date,
+        cex.names=0.8,
+        beside=T)
+
+
+barplot(data / 1000,
+        main="Demanda por dia",
+        xlab="Dia",
+        ylab="Demanda (k)",
+        col=c("chartreuse", "blue4"),
+        cex.names=0.8,
+        names.arg = Sub10.dataset$Date)
+
+```
+
+
+
+ 
+ 
